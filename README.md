@@ -7,7 +7,7 @@ Sirve de dos maneras, sin cambiar el código del bot:
 - **Servicio aparte.** `npm start` levanta un proceso HTTP con el webhook.
 - **Pieza de otro proyecto.** Importás `createWhatsAppBot` y lo montás en un servidor que ya exista.
 
-No tiene dependencias de runtime. Corre en Node 20 o superior.
+No tiene dependencias de runtime. El código es TypeScript y Node 22.18 o superior lo ejecuta directo, sin compilar.
 
 ## Estado
 
@@ -19,7 +19,7 @@ Hoy hace esto:
 - Recibe el `POST` del webhook y se queda con los mensajes de usuario.
 - Valida `X-Hub-Signature-256` cuando `WHATSAPP_APP_SECRET` está definido.
 - Evita contestar dos veces el mismo `id` de mensaje, en memoria y solo mientras el proceso vive.
-- Llama a un handler reemplazable. Si no pasás uno, devuelve el mismo texto.
+- Llama a un handler reemplazable. `npm start` usa el menú de recetas. Si no pasás uno, la librería devuelve el mismo texto.
 
 Hoy no hace esto:
 
@@ -49,8 +49,8 @@ npm run start:example
 
 El paquete exporta `createWhatsAppBot`. El handler recibe el mensaje normalizado y devuelve el texto a enviar. Si no devuelve nada, el bot no contesta.
 
-```js
-import { createWhatsAppBot } from './src/index.js'
+```ts
+import { createWhatsAppBot } from './src/index.ts'
 
 const bot = createWhatsAppBot({
   accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
@@ -66,7 +66,7 @@ const bot = createWhatsAppBot({
 
 En un `http.Server` que ya exista, el resto de las rutas sigue siendo de la app:
 
-```js
+```ts
 server.on('request', (req, res) => {
   const path = new URL(req.url, 'http://localhost').pathname
   if (path === '/webhook') return bot.handleNodeRequest(req, res)
@@ -75,7 +75,7 @@ server.on('request', (req, res) => {
 
 `bot.client.sendText(to, body)` queda disponible para enviar fuera del ciclo del webhook. Dentro de la ventana de atención conviene devolver la respuesta desde `onMessage`.
 
-Detalle de variables, Docker y el contrato del handler: [docs/integracion.md](docs/integracion.md). Flujo y piezas internas: [docs/arquitectura.md](docs/arquitectura.md).
+Detalle de variables, Docker y el contrato del handler: [docs/integracion.md](docs/integracion.md). Flujo y piezas internas: [docs/arquitectura.md](docs/arquitectura.md). Por qué existe cada función: [docs/funciones.md](docs/funciones.md).
 
 ## Variables
 
@@ -100,11 +100,11 @@ Cubren la verificación, el eco, un handler propio, el duplicado, la firma, un f
 ## Estructura
 
 ```
-src/index.js      API pública
-src/bot.js        webhook, handler y servidor
-src/client.js     POST a /messages
-src/parse.js      webhook de Meta -> mensaje normalizado
-src/server.js     entrada del proceso independiente
+src/index.ts      API pública
+src/bot.ts        webhook, handler y servidor
+src/client.ts     POST a /{version}/{phone-number-id}/messages
+src/parse.ts      webhook de Meta -> mensaje normalizado
+src/server.ts     entrada del proceso independiente
 examples/         una respuesta distinta a la de eco
-docs/             arquitectura, integración y decisiones abiertas
+docs/             arquitectura, integración, decisiones y el porqué de cada función
 ```

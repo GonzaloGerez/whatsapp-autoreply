@@ -42,6 +42,12 @@ export type MessageHandler = (
   context: BotContext,
 ) => Reply | Reply[] | void | Promise<Reply | Reply[] | void>
 
+export interface BotLogger {
+  info?: (...args: unknown[]) => void
+  warn?: (...args: unknown[]) => void
+  error?: (...args: unknown[]) => void
+}
+
 export interface BotOptions {
   accessToken: string
   phoneNumberId: string
@@ -50,11 +56,7 @@ export interface BotOptions {
   apiVersion?: string
   onMessage?: MessageHandler
   fetchImpl?: typeof fetch
-  logger?: {
-    info?: (...args: unknown[]) => void
-    warn?: (...args: unknown[]) => void
-    error?: (...args: unknown[]) => void
-  }
+  logger?: BotLogger
 }
 
 export interface WebhookResult {
@@ -63,25 +65,16 @@ export interface WebhookResult {
   contentType?: string
 }
 
+export interface ReceiveInput {
+  rawBody: Buffer | string
+  signature?: string
+  payload: unknown
+}
+
 export interface WhatsAppBot {
-  verify(query: Record<string, string | undefined>): WebhookResult
-  receive(input: {
-    rawBody: Buffer | string
-    signature?: string
-    payload: unknown
-  }): Promise<WebhookResult>
+  verify(query: Record<string, string | string[] | undefined>): WebhookResult
+  receive(input: ReceiveInput): Promise<WebhookResult>
   handleNodeRequest(req: IncomingMessage, res: ServerResponse): Promise<void>
   listen(options?: { port?: number; host?: string; path?: string }): Promise<Server>
   client: WhatsAppClient
 }
-
-export function createWhatsAppBot(options: BotOptions): WhatsAppBot
-export function createClient(options: {
-  accessToken: string
-  phoneNumberId: string
-  apiVersion?: string
-  fetchImpl?: typeof fetch
-  timeoutMs?: number
-}): WhatsAppClient
-export function loadConfig(env?: NodeJS.ProcessEnv): WhatsAppConfig
-export function loadEnvFile(path?: string): void

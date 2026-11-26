@@ -15,4 +15,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 USER node
 
-CMD ["node", "src/server.js"]
+ENV NODE_OPTIONS=--experimental-strip-types
+CMD ["node", "src/server.ts"]

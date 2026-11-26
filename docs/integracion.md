@@ -17,12 +17,14 @@ Rutas del proceso:
 | `POST /webhook` | `200` si el lote se procesó, `401` si la firma no cierra, `500` si Meta rechazó el envío |
 | `GET /health` | `{ "ok": true }` |
 
-La imagen de Docker hace lo mismo y no instala paquetes:
+En esta PC el servicio de prueba es el contenedor:
 
 ```bash
-docker build -t whatsapp-autoreply .
-docker run --rm -p 3000:3000 --env-file .env whatsapp-autoreply
+cp .env.example .env
+docker compose up -d --build
 ```
+
+La imagen no instala paquetes. El mismo resultado, sin Compose, es `docker build -t whatsapp-autoreply .` y `docker run --rm -p 3000:3000 --env-file .env whatsapp-autoreply`.
 
 ## Dentro de otra app
 
@@ -34,7 +36,7 @@ npm install github:GonzaloGerez/whatsapp-autoreply
 
 Hasta entonces se puede copiar `src/` o apuntar el `import` al checkout.
 
-```js
+```ts
 import http from 'node:http'
 import { createWhatsAppBot, loadConfig, loadEnvFile } from 'whatsapp-autoreply'
 
@@ -88,7 +90,7 @@ onMessage(message, ctx) => string | { text: string } | Array<...> | void
 | `ctx.client.sendText(to, body)` | Envío directo |
 | `ctx.phoneNumberId` | Número configurado en este proceso |
 
-El handler por defecto, el de `npm start`, devuelve el mismo texto. `examples/custom-reply.js` muestra un saludo con el nombre del perfil.
+`npm start` y el contenedor contestan con el menú de recetas. El detalle está en [recetas.md](recetas.md). El handler de la librería, si nadie pasa `onMessage`, devuelve el mismo texto. `examples/custom-reply.ts` muestra un saludo con el nombre del perfil. El detalle de los endpoints de Cloud API está en [arquitectura.md](arquitectura.md).
 
 ## Alta en Meta
 

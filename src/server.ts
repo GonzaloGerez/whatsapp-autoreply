@@ -1,6 +1,7 @@
-import { createWhatsAppBot } from './bot.js'
-import { loadConfig, missingConfigKeys } from './config.js'
-import { loadEnvFile } from './env.js'
+import { createWhatsAppBot } from './bot.ts'
+import { loadConfig, missingConfigKeys } from './config.ts'
+import { loadEnvFile } from './env.ts'
+import { recipeOnMessage } from './menu.ts'
 
 loadEnvFile()
 
@@ -12,7 +13,7 @@ if (missing.length > 0) {
   process.exit(1)
 }
 
-const bot = createWhatsAppBot(config)
+const bot = createWhatsAppBot({ ...config, onMessage: recipeOnMessage })
 const server = await bot.listen({ port: config.port, path: config.webhookPath })
 const address = server.address()
 const port = typeof address === 'object' && address ? address.port : config.port

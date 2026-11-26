@@ -1,7 +1,8 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-export function loadEnvFile(path = resolve(process.cwd(), '.env')) {
+/** Carga `.env` sin pisar variables ya definidas, para que Docker pueda inyectarlas y no haga falta otra dependencia. */
+export function loadEnvFile(path = resolve(process.cwd(), '.env')): void {
   if (!existsSync(path)) return
 
   const text = readFileSync(path, 'utf8')

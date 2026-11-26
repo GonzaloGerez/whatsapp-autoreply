@@ -1,12 +1,26 @@
 import { createHmac } from 'node:crypto'
 import assert from 'node:assert/strict'
+import type { AddressInfo } from 'node:net'
 import test from 'node:test'
-import { createWhatsAppBot } from '../src/bot.js'
-import { formatRecipient } from '../src/client.js'
+import { createWhatsAppBot } from '../src/bot.ts'
+import { formatRecipient } from '../src/client.ts'
+import type { BotOptions } from '../src/types.ts'
 
 const silent = { warn() {}, error() {}, info() {} }
 
-function textWebhook(body, id = 'wamid.1') {
+interface RecordedCall {
+  url: string
+  authorization: string | undefined
+  body: {
+    messaging_product: string
+    recipient_type: string
+    to: string
+    type: string
+    text: { preview_url: boolean; body: string }
+  }
+}
+
+function textWebhook(body: string, id = 'wamid.1') {
   return {
     object: 'whatsapp_business_account',
     entry: [
@@ -34,12 +48,23 @@ function textWebhook(body, id = 'wamid.1') {
   }
 }
 
-function createTestBot(overrides = {}) {
-  const calls = []
-  const fetchImpl = overrides.fetchImpl ?? (async (url, init) => {
-    calls.push({ url, init, body: JSON.parse(init.body) })
-    return new Response(JSON.stringify({ messages: [{ id: 'wamid.out' }] }), { status: 200 })
-  })
+function createTestBot(overrides: Partial<BotOptions> = {}) {
+  const calls: RecordedCall[] = []
+  const fetchImpl: typeof fetch =
+    overrides.fetchImpl ??
+    (async (url, init) => {
+      const headers = init?.headers
+      const authorization =
+        headers && !Array.isArray(headers) && !(headers instanceof Headers)
+          ? headerValue(headers.Authorization ?? headers.authorization)
+          : undefined
+      calls.push({
+        url: String(url),
+        authorization,
+        body: JSON.parse(String(init?.body ?? '{}')) as RecordedCall['body'],
+      })
+      return new Response(JSON.stringify({ messages: [{ id: 'wamid.out' }] }), { status: 200 })
+    })
 
   const bot = createWhatsAppBot({
     accessToken: 'token',
@@ -47,7 +72,6 @@ function createTestBot(overrides = {}) {
     verifyToken: 'verify-me',
     appSecret: 'secret',
     logger: silent,
-    fetchImpl,
     ...overrides,
     fetchImpl,
   })
@@ -87,9 +111,9 @@ test('responde el texto recibido y manda el número con prefijo +', async () => 
 
   assert.equal(result.status, 200)
   assert.equal(calls.length, 1)
-  assert.equal(calls[0].url, 'https://graph.facebook.com/v27.0/123/messages')
-  assert.equal(calls[0].init.headers.Authorization, 'Bearer token')
-  assert.deepEqual(calls[0].body, {
+  assert.equal(calls[0]?.url, 'https://graph.facebook.com/v27.0/123/messages')
+  assert.equal(calls[0]?.authorization, 'Bearer token')
+  assert.deepEqual(calls[0]?.body, {
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
     to: '+5491112345678',
@@ -105,8 +129,12 @@ test('usa el handler propio y acepta un string como respuesta', async () => {
     },
   })
   const payload = textWebhook('ping')
-  await bot.receive({ rawBody: JSON.stringify(payload), signature: signature('secret', JSON.stringify(payload)), payload })
-  assert.equal(calls[0].body.text.body, 'Hola Ada: ping')
+  await bot.receive({
+    rawBody: JSON.stringify(payload),
+    signature: signature('secret', JSON.stringify(payload)),
+    payload,
+  })
+  assert.equal(calls[0]?.body.text.body, 'Hola Ada: ping')
 })
 
 test('no responde dos veces el mismo mensaje', async () => {
@@ -187,7 +215,9 @@ test('rechaza una firma inválida y no reintenta un envío fallido como éxito',
 test('el servidor verifica el challenge y expone /health', async () => {
   const { bot } = createTestBot()
   const server = await bot.listen({ port: 0, host: '127.0.0.1', path: '/webhook' })
-  const { port } = server.address()
+  const address = server.address()
+  if (!address || typeof address === 'string') throw new Error('expected a TCP port')
+  const { port } = address as AddressInfo
   try {
     const health = await fetch(`http://127.0.0.1:${port}/health`)
     assert.equal(health.status, 200)
@@ -202,7 +232,7 @@ test('el servidor verifica el challenge y expone /health', async () => {
     const missing = await fetch(`http://127.0.0.1:${port}/otra`)
     assert.equal(missing.status, 404)
   } finally {
-    await new Promise((resolve) => server.close(resolve))
+    await new Promise<void>((resolve) => server.close(() => resolve()))
   }
 })
 
@@ -211,6 +241,10 @@ test('agrega + solo a números en dígitos', () => {
   assert.equal(formatRecipient('+5491112345678'), '+5491112345678')
 })
 
-function signature(secret, body) {
+function signature(secret: string, body: string): string {
   return `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`
+}
+
+function headerValue(value: string | undefined): string | undefined {
+  return value
 }

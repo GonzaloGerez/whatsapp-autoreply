@@ -5,19 +5,24 @@
   "description": "PoC portable de un bot de respuesta automática con la WhatsApp Cloud API.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "default": "./src/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
-    "start": "node src/server.js",
-    "start:example": "node examples/custom-reply.js",
-    "test": "node --test"
+    "start": "node src/server.ts",
+    "start:example": "node examples/custom-reply.ts",
+    "test": "node --test test/bot.test.ts test/menu.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
   }
 }

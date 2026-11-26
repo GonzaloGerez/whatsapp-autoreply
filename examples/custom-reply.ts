@@ -1,10 +1,11 @@
-import { createWhatsAppBot, loadConfig, loadEnvFile } from '../src/index.js'
+import { createWhatsAppBot, loadConfig, loadEnvFile } from '../src/index.ts'
 
 loadEnvFile()
 
 const config = loadConfig()
 const bot = createWhatsAppBot({
   ...config,
+  /** Saludo de prueba con el nombre del perfil. Existe para ver otra respuesta sin cambiar el eco de `npm start`. */
   async onMessage(message) {
     if (message.type !== 'text' || !message.text) return undefined
     const name = message.name ? ` ${message.name}` : ''
